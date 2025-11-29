@@ -1,6 +1,8 @@
 db = db.getSiblingDB("pyannote_api_infos");
 
-db.createCollection("audio_file", {
+// The collection stores everything related to the audio file
+// Need a validation schema to be sure that added data corresponds to the structure of the collection
+db.createCollection("file_infos", {
     validator: {
         $jsonSchema: {
             bsonType: "object",
@@ -60,7 +62,11 @@ db.createCollection("audio_file", {
     }
 });
 
-db.audio_file.createIndex({"filename": 1}, {unique: true});
+db.file_infos.createIndex({"filename": 1}, {unique: true});
+
+// Collection designed to store audio files as multiple audio chunks
+db.createCollection('audio_storage.files');
+db.createCollection('audio_storage.chunks');
 
 //db.createCollection("pyannote_file");
 //db.createCollection("human_voiceprint");
