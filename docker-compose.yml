@@ -3,16 +3,19 @@ name: "PyAnnote-Api-Toolkit"
 services:
   mongodb:
     build: ./mongo
-    image: mongo:8.0-custom
-    container_name: mongo_database
+    image: mongo:8.0
     ports:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
+      - mongo-config:/data/configdb
     environment:
       MONGO_INITDB_DATABASE: pyannote_api_infos
     restart: unless-stopped
 
 volumes:
   mongo-data:
-    name: mongo-data
+    name: "mongo-data"
+  mongo-config:
+    name: "mongo-config"
+
