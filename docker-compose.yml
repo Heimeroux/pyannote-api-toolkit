@@ -16,7 +16,9 @@ services:
       - my-network
 
   api:
-    build: ./api
+    build:
+      context: .
+      dockerfile: api/Dockerfile
     environment:
       MONGO_URI: mongodb://mongodb:27017/
       API_HOST: ${API_HOST}
