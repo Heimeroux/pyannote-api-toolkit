@@ -12,6 +12,23 @@ services:
     environment:
       MONGO_INITDB_DATABASE: pyannote_api_infos
     restart: unless-stopped
+    networks:
+      - my-network
+
+  api:
+    build: ./api
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/
+      API_HOST: ${API_HOST}
+      API_PORT: ${API_PORT}
+      TOKEN_PYANNOTE: ${TOKEN_PYANNOTE}
+      MONGO_DATABASE: ${MONGO_DATABASE}
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+    networks:
+      - my-network
 
 volumes:
   mongo-data:
@@ -19,3 +36,6 @@ volumes:
   mongo-config:
     name: "mongo-config"
 
+networks:
+  my-network:
+    driver: bridge
