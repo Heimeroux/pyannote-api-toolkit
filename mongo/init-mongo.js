@@ -62,6 +62,10 @@ db.createCollection("file_infos", {
                 gridfs_id: {
                     bsonType: "objectId",
                     description: "ID created by MongoDB when the audio file have been registered."
+                },
+                job_id: {
+                    bsonType: "string",
+                    description: "ID of the job created when submitted a diarization. Value of the field must be deleted 24 hours after the job succeeded."
                 }
             }
         }
