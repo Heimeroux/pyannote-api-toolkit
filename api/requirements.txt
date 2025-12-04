@@ -1,3 +1,0 @@
-fastapi
-pymongo
-uvicorn[standard]

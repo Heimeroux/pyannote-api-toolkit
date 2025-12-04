@@ -7,7 +7,7 @@ db.createCollection("file_infos", {
         $jsonSchema: {
             bsonType: "object",
             title: "Audio File Object Validation",
-            required: ["stockage_type", "filename", "gridfs_id"],
+            required: ["storage_type", "filename", "gridfs_id"],
             properties: {
                 human_score: {
                     bsonType: "int",
@@ -50,10 +50,10 @@ db.createCollection("file_infos", {
                     bsonType: "string",
                     description: "Id of the file to locate it in the storage system."
                 },
-                stockage_type: {
+                storage_type: {
                     bsonType: "string",
                     enum: ["PyAnnote"],
-                    description: "File must be web stocked using PyAnnote only. In the future I aim to allow other services such as S3."
+                    description: "File must be web stored using PyAnnote only. In the future I aim to allow other services such as S3."
                 },
                 filename: {
                     bsonType: "string",

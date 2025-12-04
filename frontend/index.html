@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyAnnote Api Toolkit</title>
+</head>
+<body>    
+    <form id="uploadForm" enctype="multipart/form-data">
+        <label for="audio">Choisir un fichier audio :</label>
+        <input type="file" id="audio" name="audio" accept="audio/wav" required>
+        <br><br>
+
+        <label for="filename">Nom du fichier :</label>
+        <input type="text" id="filename" placeholder="Nom du fichier" required>
+        <br><br>
+
+        <label for="storageType">Type de stockage :</label>
+        <select id="storageType" required>
+            <option value="">-- Sélectionnez --</option>
+            <option value="PyAnnote">PyAnnote</option>
+        </select>
+        <br><br>
+        
+        <button type="submit">Envoyer</button>
+    </form>
+
+    <script>
+        function resetFileFields() {
+            const audioInput = document.getElementById('audio');
+            const filenameInput = document.getElementById('filename');
+        
+            audioInput.value = "";
+            filenameInput.value = "";
+        }
+        
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const audioInput = document.getElementById('audio');
+            const audioFile = audioInput.files[0];
+            const filenameInput = document.getElementById('filename');
+            const storageSelect = document.getElementById('storageType');
+
+            if (!audioFile) {
+                alert("Veuillez sélectionner un fichier.");
+                return;
+            }
+        
+            // Wav verification
+            const contentType = audioFile.type;
+            const mimeOk = contentType === "audio/wav" || contentType === "audio/x-wav";
+            const extensionOk = audioFile.name.toLowerCase().endsWith(".wav");
+        
+            if (!mimeOk || !extensionOk) {
+                alert("Le fichier doit être un fichier WAV (.wav).");
+                resetFileFields();
+                return;
+            }
+
+            const filename = filenameInput.value.trim();
+            if (!filename) {
+                alert("Veuillez entrer un nom de fichier.");
+                return;
+            }
+
+            const storageType = storageSelect.value;
+            if (!storageType) {
+                alert("Veuillez sélectionner un type de stockage.");
+                return;
+            }
+            
+            
+            const formData = new FormData();
+            formData.append('file', audioFile);
+            formData.append('filename', filename);
+            formData.append('storage_type', storageType);
+            formData.append('file_id', "fichier-1-test");
+            formData.append('content_type', contentType);
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.details || "Erreur lors de l'upload");
+                console.log('Succès :', result);
+                alert("Fichier uploadé avec succès !");
+            } catch (error) {
+                console.error('Erreur :', error);
+                alert(`Erreur : ${error.message}`);
+            }
+
+            resetFileFields();
+        });
+
+        document.getElementById('audio').addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const nameWithoutExt = file.name.replace(/\.[^/.]+$/, ""); // retirer l'extension
+                document.getElementById('filename').value = nameWithoutExt;
+            }
+        });
+    </script>
+
+    <!--<script src="script.js"></script>-->
+</body>
+</html>

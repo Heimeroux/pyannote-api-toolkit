@@ -2,35 +2,76 @@ name: "PyAnnote-Api-Toolkit"
 
 services:
   mongodb:
-    build: ./mongo
+    build: ./backend/mongo
     image: mongo:8.0
     ports:
-      - "27017:27017"
+      - "27017:27017" # To keep only if you want to connect to mongo from local
     volumes:
       - mongo-data:/data/db
       - mongo-config:/data/configdb
     environment:
-      MONGO_INITDB_DATABASE: pyannote_api_infos
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE}
     restart: unless-stopped
     networks:
-      - my-network
+      - mongo-network
 
-  api:
-    build:
-      context: .
-      dockerfile: api/Dockerfile
+  pyannote-wrapper:
+    build: ./backend/pyannote-wrapper
     environment:
-      MONGO_URI: mongodb://mongodb:27017/
-      API_HOST: ${API_HOST}
-      API_PORT: ${API_PORT}
+      API_HOST: ${HOST}
+      API_PORT: ${DOCKER_PORT_WRAPPER_PYANNOTE}
       TOKEN_PYANNOTE: ${TOKEN_PYANNOTE}
+    #ports:
+    #  - "5000:5000"
+    networks:
+      - backend-network
+
+  mongo-gateway:
+    build: ./backend/mongo-gateway
+    #ports:
+    #  - "5002:5002"
+    environment:
+      API_HOST: ${HOST}
+      API_PORT: ${DOCKER_PORT_MONGO_GATEWAY}
+      MONGO_URI: mongodb://mongodb:27017/
       MONGO_DATABASE: ${MONGO_DATABASE}
-    ports:
-      - "5000:5000"
-    depends_on:
+    depends_on: 
       - mongodb
     networks:
-      - my-network
+      - backend-network
+      - mongo-network
+
+  api-server:
+    build: ./backend/api-server
+    #ports:
+    #  - "5000:5000"
+    environment:
+      API_HOST: ${HOST}
+      API_PORT: ${DOCKER_PORT_SERVER}
+      PYANNOTE_WRAPPER_HOST: pyannote-wrapper
+      PYANNOTE_WRAPPER_PORT: ${DOCKER_PORT_WRAPPER_PYANNOTE}
+      MONGO_GATEWAY_HOST: mongo-gateway
+      MONGO_GATEWAY_PORT: ${DOCKER_PORT_MONGO_GATEWAY}
+    depends_on:
+      - mongodb
+      - pyannote-wrapper
+      - mongo-gateway
+    networks:
+      - frontend-network
+      - backend-network
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+     - mongodb
+     - pyannote-wrapper
+     - mongo-gateway
+     - api-server
+    networks:
+      - frontend-network
+
 
 volumes:
   mongo-data:
@@ -39,5 +80,9 @@ volumes:
     name: "mongo-config"
 
 networks:
-  my-network:
+  frontend-network:
+    driver: bridge
+  backend-network:
+    driver: bridge
+  mongo-network:
     driver: bridge
