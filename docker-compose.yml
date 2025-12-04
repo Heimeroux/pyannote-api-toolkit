@@ -41,6 +41,31 @@ services:
       - backend-network
       - mongo-network
 
+  webhook:
+    build: ./backend/webhook
+    #ports:
+    #  - "5003:5003"
+    environment:
+      API_HOST: ${HOST}
+      API_PORT: ${DOCKER_PORT_WEBHOOK}
+      #NGROK_SUBDOMAIN: ${NGROK_SUBDOMAIN}
+      #NGROK_AUTH_TOKEN: ${NGROK_AUTH_TOKEN}
+    networks:
+      - webhook-network
+      - backend-network
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    command:
+      - "http"
+      - "http://webhook:${DOCKER_PORT_WEBHOOK}" 
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTH_TOKEN}
+    depends_on:
+      - webhook
+    networks:
+      - webhook-network
+
   api-server:
     build: ./backend/api-server
     #ports:
@@ -56,9 +81,11 @@ services:
       - mongodb
       - pyannote-wrapper
       - mongo-gateway
+      - webhook
     networks:
       - frontend-network
       - backend-network
+      - webhook-network
 
   frontend:
     build: ./frontend
@@ -69,6 +96,7 @@ services:
      - pyannote-wrapper
      - mongo-gateway
      - api-server
+     - webhook
     networks:
       - frontend-network
 
@@ -85,4 +113,6 @@ networks:
   backend-network:
     driver: bridge
   mongo-network:
+    driver: bridge
+  webhook-network:
     driver: bridge
