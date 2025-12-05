@@ -11,8 +11,8 @@
         <input type="file" id="audio" name="audio" accept="audio/wav" required>
         <br><br>
 
-        <label for="filename">Nom du fichier :</label>
-        <input type="text" id="filename" placeholder="Nom du fichier" required>
+        <label for="filenameUpload">Nom du fichier :</label>
+        <input type="text" id="filenameUpload" placeholder="Nom du fichier" required>
         <br><br>
 
         <label for="storageType">Type de stockage :</label>
@@ -25,10 +25,18 @@
         <button type="submit">Envoyer</button>
     </form>
 
+    <form id="diarisationForm">
+        <label for="filenameDiarisation">Nom du fichier :</label>
+        <input type="text" id="filenameDiarisation" placeholder="Nom du fichier" required>
+        <br><br>
+        
+        <button type="submit">Diariser</button>
+    </form>
+
     <script>
         function resetFileFields() {
             const audioInput = document.getElementById('audio');
-            const filenameInput = document.getElementById('filename');
+            const filenameInput = document.getElementById('filenameUpload');
         
             audioInput.value = "";
             filenameInput.value = "";
@@ -39,7 +47,7 @@
             
             const audioInput = document.getElementById('audio');
             const audioFile = audioInput.files[0];
-            const filenameInput = document.getElementById('filename');
+            const filenameInput = document.getElementById('filenameUpload');
             const storageSelect = document.getElementById('storageType');
 
             if (!audioFile) {
@@ -96,11 +104,43 @@
             resetFileFields();
         });
 
+        document.getElementById('diarisationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const filenameInput = document.getElementById('filenameDiarisation');
+
+            const filename = filenameInput.value.trim();
+            if (!filename) {
+                alert("Veuillez entrer un nom de fichier.");
+                return;
+            }
+            
+            try {
+                const response = await fetch('/diarise', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ filename })
+                });
+        
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.details || "Erreur lors de la demande de diarisation");
+        
+                console.log('Succès :', result);
+                alert("Diarisation lancée avec succès !");
+            } catch (error) {
+                console.error('Erreur :', error);
+                alert(`Erreur : ${error.message}`);
+            }
+
+        });
+
         document.getElementById('audio').addEventListener('change', function() {
             const file = this.files[0];
             if (file) {
                 const nameWithoutExt = file.name.replace(/\.[^/.]+$/, ""); // retirer l'extension
-                document.getElementById('filename').value = nameWithoutExt;
+                document.getElementById('filenameUpload').value = nameWithoutExt;
             }
         });
     </script>

@@ -4,7 +4,7 @@ import requests
 import logging
 
 from pymongo import MongoClient
-from fastapi import FastAPI, UploadFile, Form, File, status
+from fastapi import FastAPI, UploadFile, Form, File, status, Query, Body
 from fastapi import HTTPException
 from interfaces import FileInfoInterface, GridfsStorageInterface
 from typing import Dict
@@ -46,6 +46,44 @@ async def register_and_add_file(
     except Exception as e:
         logger.error(f"Erreur inattendue: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur interne du serveur")
+
+@app.get("/get_file_id")
+def get_file_id(
+    filename: str = Query(..., min_length=1, description="Nom du fichier (ex: audio1.mp3)")
+) -> Dict[str, str]:
+    try:
+        file_id = file_infos.get_file_id(filename)
+        logger.info(f"File {filename} has {file_id} as file_id")
+        return {"status": "success", "file_id": file_id}
+    except ValueError as ve:
+        logger.error(f"Erreur de validation: {str(ve)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except RuntimeError as re:
+        logger.error(f"Erreur d'enregistrement: {str(re)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(re))
+    except Exception as e:
+        logger.error(f"Erreur inattendue: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur interne du serveur")
+
+@app.post("/update_job_id")
+def update_job_id(
+    filename: str = Body(..., embed=True, min_length=1, description="Name of the file sent to diarisation"),
+    job_id: str = Body(..., embed=True, min_length=1, description="Job ID of the diarisation process")
+) -> Dict[str, str]:
+    try:
+        update_result = file_infos.update_job_id(job_id, filename)
+        logger.info(f"File {filename} updated its job_id {job_id}")
+        return {"status": "success", "message": "Successfully updated the file_infos collection having added the job id"}
+    except ValueError as ve:
+        logger.error(f"Erreur de validation: {str(ve)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except RuntimeError as re:
+        logger.error(f"Erreur d'enregistrement: {str(re)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(re))
+    except Exception as e:
+        logger.error(f"Erreur inattendue: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur interne du serveur")
+
 
 if __name__ == "__main__":
     host = os.getenv("API_HOST", "0.0.0.0")

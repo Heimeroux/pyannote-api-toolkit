@@ -6,13 +6,14 @@ import numpy as np
 import requests
 import logging
 
-from fastapi import FastAPI, Request, UploadFile, Form, File, status
+from fastapi import FastAPI, Request, UploadFile, Form, File, status, Body
 from fastapi import HTTPException
 from typing import Dict
 
 api_host = os.getenv("API_HOST")
 api_port = os.getenv("API_PORT")
 token_pyannote = os.getenv("TOKEN_PYANNOTE")
+#webhook_uri = os.getenv("WEBHOOK_URI")
 
 
 app = FastAPI()
@@ -51,7 +52,45 @@ async def upload_file(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-# TO DO
+@app.post("/diarise")
+async def diarise(
+    file_id: str = Body(..., embed=True, min_length=1, description="File ID of the file to ask for diarisation")
+) -> Dict[str, str]:
+    """
+    Endpoint pour lancer la diarisation d'un fichier audio.
+
+    Args:
+        file_id (str): Identifiant du fichier (obligatoire).
+
+    Returns:
+        dict: Résultat avec un job_id.
+    """
+    try:
+        response = requests.post(
+            "https://api.pyannote.ai/v1/diarize",
+            json={
+                "url": f"media://{file_id}",
+                #"webhook": webhook_uri,
+                "confidence": True,
+                "turnLevelConfidence": True
+            },
+            headers={
+               "Authorization": f"Bearer {token_pyannote}",
+               "Content-Type": "application/json"
+            }
+        )
+        response.raise_for_status()
+        job_id = response.json()['jobId']
+
+        logger.info(f"File {file_id} successfully sent for diarisation to PyAnnote.")
+        return {"status": "success", "job_id": job_id}
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"PyAnnote API error: {e.response.text}")
+        raise HTTPException(status_code=e.response.status_code, detail=f"PyAnnote API error: {e.response.text}")
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+    
 @app.get("/diarize_file/{filename}")
 def diarize_file(object_key: str, job_id: str, filename: str):
     """

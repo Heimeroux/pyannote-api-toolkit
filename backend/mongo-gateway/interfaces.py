@@ -19,7 +19,7 @@ class FileInfoInterface():
         """
         self._collection = database[collection_name]
 
-    def _update_document(
+    def _update_one(
         self,
         criteria: Dict[str, Any],
         update_fields: Dict[str, Any],
@@ -117,6 +117,34 @@ class FileInfoInterface():
             return result
         except Exception as e:
             raise RuntimeError(f"Error while inserting the document: {str(e)}")
+
+    def get_file_id(self, filename: str) -> str:
+        """
+        Récupère le champ `file_id` d'un document MongoDB en fonction du `filename`.
+    
+        Args:
+            filename (str): Nom du fichier à rechercher.
+    
+        Returns:
+            str: Le `file_id` correspondant.
+    
+        Raises:
+            ValueError: Si le fichier n'est pas trouvé.
+            PyMongoError: En cas d'erreur de connexion ou de requête.
+        """
+        try:
+            document = self._collection.find_one(
+                {"filename": filename},
+                {"file_id": 1, "_id": 0}
+            )
+        
+            if not document:
+                raise ValueError(f"Aucun document trouvé pour le fichier '{filename}'.")
+        
+            return document["file_id"]
+        
+        except Exception as e:
+            raise RuntimeError(f"Erreur MongoDB lors de la recherche: {str(e)}")
 
 class GridfsStorageInterface():
     """
