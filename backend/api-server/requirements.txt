@@ -2,3 +2,5 @@ uvicorn[standard]
 fastapi
 requests
 python-multipart
+seaborn
+matplolib

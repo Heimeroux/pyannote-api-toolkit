@@ -7,7 +7,7 @@ from pymongo import MongoClient
 from fastapi import FastAPI, UploadFile, Form, File, status, Query, Body
 from fastapi import HTTPException
 from interfaces import FileInfoInterface, GridfsStorageInterface
-from typing import Dict
+from typing import Dict, List, Any
 
 mongo_uri = os.getenv("MONGO_URI")
 mongo_database = os.getenv("MONGO_DATABASE")
@@ -84,6 +84,32 @@ def update_job_id(
         logger.error(f"Erreur inattendue: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur interne du serveur")
 
+@app.post("/update_diarization_result")
+def update_diarization_result(
+    job_id: str = Body(..., embed=True, min_length=1, description="File ID of the file to ask for diarisation"),
+    diarization: List[Dict[str, Any]] = Body(..., embed=True, default_factory=list, description="Diarization result"),
+    turn_level_mean_score: float = Body(..., embed=True, ge=0, le=100, description="Mean of the confidences scores over all turn"),
+    sample_level_mean_score: float = Body(..., embed=True, ge=0, le=100, description="Mean of the confidences scores over all samples")
+) -> Dict[str, str]:
+    try:
+        update_result = file_infos.update_diarization_infos(
+            sample_level_mean_score,
+            turn_level_mean_score,
+            diarization,
+            job_id
+        )
+
+        logger.info(f"File whose job-id is {job_id} updated its diarization result")
+        return {"status": "success", "message": "Successfully update the collection modifying scores and diarization result"}
+    except ValueError as ve:
+        logger.error(f"Erreur de validation: {str(ve)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except RuntimeError as re:
+        logger.error(f"Erreur d'enregistrement: {str(re)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(re))
+    except Exception as e:
+        logger.error(f"Erreur inattendue: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur interne du serveur")
 
 if __name__ == "__main__":
     host = os.getenv("API_HOST", "0.0.0.0")

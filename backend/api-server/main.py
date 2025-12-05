@@ -4,10 +4,15 @@ import uvicorn
 import sys
 import logging
 
-from fastapi import FastAPI, UploadFile, Form, File, HTTPException, status, Request
+from fastapi import FastAPI, UploadFile, Form, File, HTTPException, status, Request, Body
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional, Dict, Union
+from typing import Optional, Dict, Union, Any, List
+
+from fastapi.responses import Response
+import seaborn as sns
+import matplotlib.pyplot as plt
+import io
 
 pyannote_wrapper_host = os.getenv("PYANNOTE_WRAPPER_HOST")
 pyannote_wrapper_port = os.getenv("PYANNOTE_WRAPPER_PORT")
@@ -187,6 +192,37 @@ async def diarise(request: Request) -> Dict[str, str]:
             content={"message": "error", "details": "Internal server error"}
         )
 
+@app.post("/update_diarization_result")
+async def ask_to_update_diarization_result(
+    job_id: str = Body(..., embed=True, min_length=1, description="File ID of the file to ask for diarisation"),
+    diarization: List[Dict[str, Any]] = Body(..., embed=True, default_factory=list, description="Diarization result"),
+    turn_level_mean_score: float = Body(..., embed=True, ge=0, le=100, description="Mean of the confidences scores over all turn"),
+    sample_level_mean_score: float = Body(..., embed=True, ge=0, le=100, description="Mean of the confidences scores over all samples")
+) -> Dict[str, str]:
+    try:
+        url_to_use = f"{mongo_gateway_uri}/update_diarization_result"
+        data = {
+            "job_id": job_id,
+            "diarization": diarization,
+            "turn_level_mean_score": turn_level_mean_score,
+            "sample_level_mean_score": sample_level_mean_score
+        }
+        result = call_external_service(url_to_use, method="POST", json=data)
+        logger.info(f"Mongo gateway response: {result}")
+        
+        return {"status": "success", "message": "File infos successfully updated."}
+    except HTTPException as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"message": "error", "details": str(e.detail)}
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"message": "error", "details": "Internal server error"}
+        )
+        
 if __name__ == '__main__':
     host = os.getenv("API_HOST", "0.0.0.0")
     port = int(os.getenv("API_PORT", 5000))

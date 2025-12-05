@@ -13,11 +13,19 @@ from typing import Dict
 api_host = os.getenv("API_HOST")
 api_port = os.getenv("API_PORT")
 token_pyannote = os.getenv("TOKEN_PYANNOTE")
-#webhook_uri = os.getenv("WEBHOOK_URI")
+webhook_uri = os.getenv("WEBHOOK_URI")
 
 
 app = FastAPI()
 logger = logging.getLogger(__name__)
+
+logger.setLevel(logging.DEBUG)
+    
+# create custom handler for INFO msg
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setLevel(logging.DEBUG)
+    
+logger.addHandler(stdout_handler)
 
 
 @app.post("/upload_file")
@@ -70,7 +78,7 @@ async def diarise(
             "https://api.pyannote.ai/v1/diarize",
             json={
                 "url": f"media://{file_id}",
-                #"webhook": webhook_uri,
+                "webhook": webhook_uri,
                 "confidence": True,
                 "turnLevelConfidence": True
             },

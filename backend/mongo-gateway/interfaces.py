@@ -1,7 +1,7 @@
 from gridfs import GridFS
 from bson import ObjectId
 
-from typing import Optional, BinaryIO, Union, Dict, Any
+from typing import Optional, BinaryIO, Union, Dict, Any, List
 from pymongo.results import InsertOneResult, UpdateResult, DeleteResult
 from pymongo.database import Database
 
@@ -42,7 +42,7 @@ class FileInfoInterface():
         self,
         sample_level_mean_score: float,
         turn_level_mean_score: float,
-        diarization_result: Dict[str, Any],
+        diarization_result: List[Dict[str, Any]],
         job_id: str
     ) -> UpdateResult:
         """
