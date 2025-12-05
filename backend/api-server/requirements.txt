@@ -3,4 +3,4 @@ fastapi
 requests
 python-multipart
 seaborn
-matplolib
+matplotlib
