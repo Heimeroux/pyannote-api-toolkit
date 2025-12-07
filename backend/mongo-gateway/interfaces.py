@@ -146,6 +146,40 @@ class FileInfoInterface():
         except Exception as e:
             raise RuntimeError(f"Erreur MongoDB lors de la recherche: {str(e)}")
 
+    def get_diarization_result(self, filename: str) -> List[Dict[str, Any]]:
+        try:
+            document = self._collection.find_one(
+                {"filename": filename},
+                {"diarization_result": 1, "_id": 0}
+            )
+        
+            if not document:
+                raise ValueError(f"Aucun document trouvé pour le fichier '{filename}'.")
+        
+            return document["diarization_result"]
+        
+        except Exception as e:
+            raise RuntimeError(f"Erreur MongoDB lors de la recherche: {str(e)}")
+
+    def get_number_of_documents(self) -> int:
+        try:
+            nb_of_docs = self._collection.count_documents({})
+
+            return nb_of_docs
+            
+        except Exception as e:
+            raise RuntimeError(f"Erreur MongoDB lors de la recherche: {str(e)}")
+
+    def get_all_filenames(self) -> List[str]:
+        try:
+            filenames = self._collection.distinct("filename")
+
+            return filenames
+            
+        except Exception as e:
+            raise RuntimeError(f"Erreur MongoDB lors de la recherche: {str(e)}")
+            
+
 class GridfsStorageInterface():
     """
     Interface pour la gestion des fichiers audio dans GridFS.

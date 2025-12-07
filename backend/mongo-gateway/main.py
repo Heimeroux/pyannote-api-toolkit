@@ -7,7 +7,7 @@ from pymongo import MongoClient
 from fastapi import FastAPI, UploadFile, Form, File, status, Query, Body
 from fastapi import HTTPException
 from interfaces import FileInfoInterface, GridfsStorageInterface
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Union
 
 mongo_uri = os.getenv("MONGO_URI")
 mongo_database = os.getenv("MONGO_DATABASE")
@@ -110,6 +110,76 @@ def update_diarization_result(
     except Exception as e:
         logger.error(f"Erreur inattendue: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur interne du serveur")
+
+@app.get("/get_diarization_result")
+def get_diarization_result(
+    filename: str = Query(..., min_length=1, description="Nom du fichier (ex: audio1.mp3)")
+) -> Dict[str, Any]:
+    try:
+        diarization = file_infos.get_diarization_result(filename)
+        logger.info(f"Successfuly got {filename} diarization")
+        #logger.info(f"File {filename} has {diarization} as diarization")
+        return {"status": "success", "diarization": diarization}
+    except ValueError as ve:
+        logger.error(f"Erreur de validation: {str(ve)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except RuntimeError as re:
+        logger.error(f"Erreur de récupération: {str(re)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(re))
+    except Exception as e:
+        logger.error(f"Erreur inattendue: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur interne du serveur")
+
+@app.get("/get_number_of_documents")
+def get_number_of_documents() -> Dict[str, Union[str, int]]:
+    try:
+        nb_of_docs = file_infos.get_number_of_documents()
+        logger.info(f"Successfuly got the total number of documents: {nb_of_docs}")
+        #logger.info(f"File {filename} has {diarization} as diarization")
+        return {"status": "success", "nb_of_docs": nb_of_docs}
+    except RuntimeError as re:
+        logger.error(f"Erreur de récupération: {str(re)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(re))
+    except Exception as e:
+        logger.error(f"Erreur inattendue: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur interne du serveur")
+
+@app.get("/get_all_filenames")
+def get_all_filenames() -> Dict[str, Union[str, List[str]]]:
+    try:
+        filenames = file_infos.get_all_filenames()
+        logger.info(f"Successfuly got all filenames {filenames}")
+        #logger.info(f"File {filename} has {diarization} as diarization")
+        return {"status": "success", "filenames": filenames}
+    except RuntimeError as re:
+        logger.error(f"Erreur de récupération: {str(re)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(re))
+    except Exception as e:
+        logger.error(f"Erreur inattendue: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur interne du serveur")
+
+@app.post("/update_human_score")
+def update_human_score(
+    human_score: int = Body(..., embed=True, ge=0, le=100, description="Score from human assessment"),
+    filename: str = Body(..., embed=True, min_length=1, description="Name of the file sent to diarisation")
+) -> Dict[str, str]:
+    try:
+        update_result = file_infos.update_human_score(
+            human_score,
+            filename
+        )
+        logger.info(f"File {filename} updated its human score")
+        return {"status": "success", "message": "Successfully update the collection modifying human score"}
+    except ValueError as ve:
+        logger.error(f"Erreur de validation: {str(ve)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except RuntimeError as re:
+        logger.error(f"Erreur d'enregistrement: {str(re)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(re))
+    except Exception as e:
+        logger.error(f"Erreur inattendue: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur interne du serveur")
+
 
 if __name__ == "__main__":
     host = os.getenv("API_HOST", "0.0.0.0")

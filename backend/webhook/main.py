@@ -21,8 +21,6 @@ api_server_uri = f"http://{api_server_host}:{api_server_port}"
 app = FastAPI()
 logger = logging.getLogger(__name__)
 
-logger = logging.getLogger(__name__)
-
 logger.setLevel(logging.DEBUG)
     
 # create custom handler for INFO msg

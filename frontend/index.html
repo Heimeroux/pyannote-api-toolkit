@@ -13,6 +13,11 @@
 
         <label for="filenameUpload">Nom du fichier :</label>
         <input type="text" id="filenameUpload" placeholder="Nom du fichier" required>
+        <!--
+        <select id="filenameUpload" required>
+        <option value="">-- Sélectionnez --</option>
+        </select>
+        -->
         <br><br>
 
         <label for="storageType">Type de stockage :</label>
@@ -27,13 +32,137 @@
 
     <form id="diarisationForm">
         <label for="filenameDiarisation">Nom du fichier :</label>
-        <input type="text" id="filenameDiarisation" placeholder="Nom du fichier" required>
+        <!--<input type="text" id="filenameDiarisation" placeholder="Nom du fichier" required>-->
+        
+        <select id="filenameDiarisation" required>
+        <option value="">-- Sélectionnez --</option>
+        </select>
+        
         <br><br>
         
         <button type="submit">Diariser</button>
     </form>
 
+    <form id="file-form">
+        <label for="filenameSVG">Nom du fichier (ex: "tips" ou "iris") :</label>
+        <!--<input type="text" id="filenameSVG" name="filename" required>-->
+        <select id="filenameSVG" required>
+        <option value="">-- Sélectionnez --</option>
+        </select>
+        <button type="submit">Générer le diagramme</button>
+    </form>
+
+    <!-- Conteneur pour le SVG -->
+    <div id="plot-container">
+        <p>Aucun diagramme généré. Veuillez soumettre un nom de fichier.</p>
+    </div>
+    <br><br>
+
+    
+    <br><br>
+
+    <h1>Human score</h1>
+    <form id="integerForm">
+        <label for="integerInput">Entrez un entier entre 0 et 100 :</label>
+        <input type="number" id="integerInput" name="integerInput" min="0" max="100" step="1" required>
+        <label for="filenameLists">Nom des fichiers :</label>
+        <select id="filenameLists" required>
+            <option value="">-- Sélectionnez --</option>
+            <!--<option value="PyAnnote">PyAnnote</option>-->
+        </select>
+        <button type="submit">Soumettre</button>
+    </form>
+    <br><br>
+    
+
     <script>
+        let nbOfDocs = 0;
+        let filenamesRegistered = [];
+        let listIds = ["filenameLists", "filenameSVG", "filenameDiarisation"];
+
+        async function getNumberOfDocuments() {
+            try {
+                const response = await fetch('/get_number_of_documents', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+        
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.details || "Erreur lors de la demande du nb de docs");
+        
+                console.log('Succès :', result);
+                //alert("Récupération réussie avec succès !");
+                nbOfDocs = result["nb_of_docs"];
+            } catch (error) {
+                console.error('Erreur :', error);
+                alert(`Erreur : ${error.message}`);
+            }
+        }
+
+        async function getAllFilenames() {
+            try {
+                const response = await fetch('/get_all_filenames', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+        
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.details || "Erreur lors de la demande de filenams");
+        
+                console.log('Succès :', result);
+                //alert("Récupération réussie avec succès !");
+                filenamesRegistered = result["filenames"];
+            } catch (error) {
+                console.error('Erreur :', error);
+                alert(`Erreur : ${error.message}`);
+            }
+        }
+
+        async function updateFilenamesFields(listId) {
+            const newStorageTypes = filenamesRegistered.map(item => ({
+                value: item,
+                label: item
+            }));
+            
+            const selectElement = document.getElementById(listId);
+            const existingOptions = Array.from(selectElement.options).slice(1);
+            const existingValues = existingOptions.map(option => option.value);
+
+            const newOptionsToAdd = newStorageTypes.filter(
+                type => !existingValues.includes(type.value)
+            );
+
+            newOptionsToAdd.forEach(type => {
+                const option = document.createElement("option");
+                option.value = type.value;
+                option.textContent = type.label;
+                selectElement.appendChild(option);
+            });
+
+        }
+        
+        async function refreshData() {
+            try {
+                await Promise.all([
+                    getNumberOfDocuments(),
+                    getAllFilenames()
+                ]);
+
+                // for d in data: updateFilenamesFields(d);
+                for (const listId of listIds) {
+                    updateFilenamesFields(listId);
+                }
+            } catch (error) {
+                console.error("Erreur lors de l'initialisation :", error);
+            }
+        }
+        
+        refreshData();
+        
         function resetFileFields() {
             const audioInput = document.getElementById('audio');
             const filenameInput = document.getElementById('filenameUpload');
@@ -65,12 +194,13 @@
                 resetFileFields();
                 return;
             }
-
+            
             const filename = filenameInput.value.trim();
             if (!filename) {
                 alert("Veuillez entrer un nom de fichier.");
                 return;
             }
+                        
 
             const storageType = storageSelect.value;
             if (!storageType) {
@@ -80,10 +210,11 @@
             
             
             const formData = new FormData();
+            const fileId = "file-" + (nbOfDocs + 1);
             formData.append('file', audioFile);
             formData.append('filename', filename);
             formData.append('storage_type', storageType);
-            formData.append('file_id', "fichier-1-test");
+            formData.append('file_id', fileId);
             formData.append('content_type', contentType);
             
             try {
@@ -94,6 +225,7 @@
                 
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.details || "Erreur lors de l'upload");
+                await refreshData();
                 console.log('Succès :', result);
                 alert("Fichier uploadé avec succès !");
             } catch (error) {
@@ -109,7 +241,8 @@
             
             const filenameInput = document.getElementById('filenameDiarisation');
 
-            const filename = filenameInput.value.trim();
+            //const filename = filenameInput.value.trim();
+            const filename = filenameInput.value;
             if (!filename) {
                 alert("Veuillez entrer un nom de fichier.");
                 return;
@@ -143,6 +276,75 @@
                 document.getElementById('filenameUpload').value = nameWithoutExt;
             }
         });
+
+        document.getElementById("file-form").addEventListener("submit", function(event) {
+            event.preventDefault(); // Empêche le rechargement de la page
+
+            const filename = document.getElementById("filenameSVG").value;
+            if (!filename) {
+                alert("Veuillez entrer un nom de fichier.");
+                return;
+            }
+
+            // Appel à l'API avec le filename en paramètre
+            fetch(`/plot?filename=${encodeURIComponent(filename)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP : ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(svgContent => {
+                    document.getElementById("plot-container").innerHTML = svgContent;
+                })
+                .catch(error => {
+                    console.error("Erreur lors de la récupération du SVG :", error);
+                    /*document.getElementById("plot-container").innerHTML =
+                        `<p style="color: red;">Erreur : ${error.message}</p>`;*/
+                    document.getElementById("plot-container").innerHTML =
+                        `<p style="color: red;">Le fichier ${filename} n'a pas encore été diarisé! Veuillez procéder à la diarisation dans un premier temps.</p>`;
+                });
+        });
+
+        document.getElementById('integerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const integerInput = document.getElementById('integerInput');
+            const filenameInput = document.getElementById('filenameLists');
+            
+            const filename = filenameInput.value;
+            if (!filename) {
+                alert("Veuillez entrer un nom de fichier.");
+                return;
+            }
+                        
+
+            const integer = integerInput.value;
+            if (!integer) {
+                alert("Veuillez sélectionner un score.");
+                return;
+            }
+            
+            try {
+                const response = await fetch('/update_human_score', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ filename: filename, human_score: integer })
+                });
+        
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.details || "Erreur lors de la demande de la demande d'update de score");
+        
+                console.log('Succès :', result);
+                alert("Update réussie !");
+            } catch (error) {
+                console.error('Erreur :', error);
+                alert(`Erreur : ${error.message}`);
+            }
+        });
+        
     </script>
 
     <!--<script src="script.js"></script>-->

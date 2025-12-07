@@ -3,11 +3,15 @@ import os
 import uvicorn
 import sys
 import logging
+import pandas as pd
 
-from fastapi import FastAPI, UploadFile, Form, File, HTTPException, status, Request, Body
+from fastapi import FastAPI, UploadFile, Form, File, HTTPException, status, Request, Body, Query
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, Dict, Union, Any, List
+from collections import defaultdict
+
+from matplotlib.patches import Patch
 
 from fastapi.responses import Response
 import seaborn as sns
@@ -25,6 +29,13 @@ mongo_gateway_uri = f"http://{mongo_gateway_host}:{mongo_gateway_port}"
 app = FastAPI()
 logger = logging.getLogger(__name__)
 
+logger.setLevel(logging.DEBUG)
+    
+# create custom handler for INFO msg
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setLevel(logging.DEBUG)
+    
+logger.addHandler(stdout_handler)
 """
 origins = [
     "http://localhost:8080"
@@ -223,6 +234,203 @@ async def ask_to_update_diarization_result(
             content={"message": "error", "details": "Internal server error"}
         )
         
+@app.get("/plot")
+async def get_plot(
+    filename: str = Query(..., min_length=1, description="Nom du fichier (ex: audio1.mp3)")
+):
+    # Get diarization result
+    try:
+        url_to_use = f"{mongo_gateway_uri}/get_diarization_result"
+        data = {
+            "filename": filename
+        }
+        result = call_external_service(url_to_use, method="GET", params=data)
+        logger.info(f"Successfully got diarization result for file {filename}.")
+    except HTTPException as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"message": "error", "details": str(e.detail)}
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"message": "error", "details": "Internal server error"}
+        )
+
+    logger.info(f"Result: {result}")
+    
+    df = pd.DataFrame(result["diarization"])
+
+    speakers = df["speaker"].unique()
+    y_positions = {spk: 0.5 * (i + 1) for i, spk in enumerate(speakers)}
+
+    plt.figure(figsize=(12, 1.5*len(speakers)))
+
+    palette = sns.color_palette("husl", n_colors=len(speakers))
+
+    overlap_color = "red"
+
+    speaker_segments = defaultdict(list)
+    for _, row in df.iterrows():
+        speaker_segments[row["speaker"]].append((row["start"], row["end"]))
+
+    # Detect overlap segments
+    events = []
+    for segments in speaker_segments.values():
+        for start, end in segments:
+            events.append((start, "start"))
+            events.append((end, "end"))
+    events.sort()
+    overlap_intervals = []
+    current_overlaps = 0
+    for i in range(len(events) - 1):
+        current_overlaps += 1 if events[i][1] == "start" else -1
+        if current_overlaps > 1:
+            overlap_start = events[i][0]
+            overlap_end = events[i + 1][0]
+            overlap_intervals.append((overlap_start, overlap_end))
+            
+    # Fusion overlap segments
+    if overlap_intervals:
+        overlap_intervals.sort()
+        merged_overlaps = []
+        current_start, current_end = overlap_intervals[0]
+        for start, end in overlap_intervals[1:]:
+            # TO DO : add example to illustrate
+            if start <= current_end:
+                current_end = max(current_end, end)
+            else:
+                merged_overlaps.append((current_start, current_end))
+                current_start, current_end = start, end
+        merged_overlaps.append((current_start, current_end))
+    else:
+        merged_overlaps = []
+
+    # Draw segments foreach speaker
+    for i, speaker in enumerate(speakers):
+        for start, end in speaker_segments[speaker]:
+            # Verify if there is overlap
+            current_pos = start
+            segments_to_plot = []
+            for overlap_start, overlap_end in merged_overlaps:
+                if overlap_start < end and overlap_end > current_pos:
+                    # Add the sub-segment before overlap and indicates there is no overlap
+                    if overlap_start > current_pos:
+                        segments_to_plot.append((current_pos, overlap_start, False))
+                    # Add the overlap sub-segments and indicates there is overlap
+                    segments_to_plot.append((max(current_pos, overlap_start), min(end, overlap_end), True))
+                    current_pos = overlap_end
+            # If all overlaps ended before the end of the segments
+            if current_pos < end:
+                segments_to_plot.append((current_pos, end, False))
+            # If no overlaps add the full segment and indicates there is no overlap
+            if not segments_to_plot:
+                segments_to_plot.append((start, end, False))
+
+            # Draw each sub-segments
+            for seg_start, seg_end, is_overlap in segments_to_plot:
+                color = overlap_color if is_overlap else palette[i]
+                plt.hlines(
+                    y=y_positions[speaker],
+                    xmin=seg_start,
+                    xmax=seg_end,
+                    colors=color,
+                    lw=10,
+                )
+
+    # Manage axis y positions
+    plt.yticks(
+        ticks=[y_positions[s] for s in speakers],
+        labels=speakers
+    )
+    plt.ylim(0.25, 0.75 + (len(speakers) - 1)*0.5)
+
+    plt.xlabel("Temps (s)")
+    plt.ylabel("Speaker")
+    plt.title("Timeline des segments de parole (superpositions en rouge)")
+    plt.grid(axis="x", linestyle="--", alpha=0.7)
+
+    # Legend
+    legend_elements = [Patch(facecolor=palette[i], label=speaker) for i, speaker in enumerate(speakers)]
+    legend_elements.append(Patch(facecolor=overlap_color, label="Overlap"))
+    plt.legend(handles=legend_elements, bbox_to_anchor=(1.05, 1), loc="upper left")
+
+    plt.tight_layout()
+
+    # Export as SVG
+    svg_buffer = io.StringIO()
+    plt.savefig(svg_buffer, format="svg", bbox_inches="tight")
+    svg_content = svg_buffer.getvalue()
+    plt.close()
+
+    return Response(content=svg_content, media_type="image/svg+xml")
+
+@app.get("/get_number_of_documents")
+def get_number_of_documents() -> Dict[str, Union[str, int]]:
+    try:
+        url_to_use = f"{mongo_gateway_uri}/get_number_of_documents"
+        result = call_external_service(url_to_use, method="GET")
+        logger.info(f"Successfully got number of documents: {result['nb_of_docs']}.")
+        return {"status": "success", "nb_of_docs": result["nb_of_docs"]}
+    except HTTPException as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"message": "error", "details": str(e.detail)}
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"message": "error", "details": "Internal server error"}
+        )
+
+@app.get("/get_all_filenames")
+def get_all_filenames() -> Dict[str, Union[str, List[str]]]:
+    try:
+        url_to_use = f"{mongo_gateway_uri}/get_all_filenames"
+        result = call_external_service(url_to_use, method="GET")
+        logger.info(f"Successfully got number of documents: {result['filenames']}.")
+        return {"status": "success", "filenames": result["filenames"]}
+    except HTTPException as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"message": "error", "details": str(e.detail)}
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"message": "error", "details": "Internal server error"}
+        )
+        
+@app.post("/update_human_score")
+def update_human_score(
+    human_score: int = Body(..., embed=True, ge=0, le=100, description="Score from human assessment"),
+    filename: str = Body(..., embed=True, min_length=1, description="Name of the file sent to diarisation")
+) -> Dict[str, str]:
+    try:
+        url_to_use = f"{mongo_gateway_uri}/update_human_score"
+        data = {
+            "human_score": human_score,
+            "filename": filename
+        }
+        result = call_external_service(url_to_use, method="POST", json=data)
+        logger.info(f"Mongo gateway response: {result}")
+        
+        return {"status": "success", "message": "File infos successfully updated."}
+    except HTTPException as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"message": "error", "details": str(e.detail)}
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"message": "error", "details": "Internal server error"}
+        )
+
 if __name__ == '__main__':
     host = os.getenv("API_HOST", "0.0.0.0")
     port = int(os.getenv("API_PORT", 5000))
