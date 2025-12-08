@@ -8,7 +8,7 @@ services:
       - mongo-data:/data/db
       - mongo-config:/data/configdb
     environment:
-      MONGO_INITDB_DATABASE: ${MONGO_DATABASE}
+      MONGO_INITDB_DATABASE: pyannote_api_infos
     restart: unless-stopped
     networks:
       - mongo-network
@@ -16,20 +16,20 @@ services:
   pyannote-wrapper:
     build: ./backend/pyannote-wrapper
     environment:
-      API_HOST: ${HOST}
-      API_PORT: ${DOCKER_PORT_WRAPPER_PYANNOTE}
-      TOKEN_PYANNOTE: ${TOKEN_PYANNOTE}
-      WEBHOOK_URI: https://${NGROK_SUBDOMAIN?NGROK_SUBDOMAIN must be set!}${WEBHOOK_ENDPOINT?WEBHOOK_ENDPOINT must be set!}
+      API_HOST: 0.0.0.0
+      API_PORT: 5001
+      TOKEN_PYANNOTE: ${TOKEN_PYANNOTE?TOKEN_PYANNOTE must be set!}
+      WEBHOOK_URI: https://${NGROK_SUBDOMAIN?NGROK_SUBDOMAIN must be set!}/webhook
     networks:
       - backend-network
 
   mongo-gateway:
     build: ./backend/mongo-gateway
     environment:
-      API_HOST: ${HOST}
-      API_PORT: ${DOCKER_PORT_MONGO_GATEWAY}
+      API_HOST: 0.0.0.0
+      API_PORT: 5002
       MONGO_URI: mongodb://mongodb:27017/
-      MONGO_DATABASE: ${MONGO_DATABASE}
+      MONGO_DATABASE: pyannote_api_infos
     depends_on: 
       - mongodb
     networks:
@@ -39,11 +39,11 @@ services:
   webhook:
     build: ./backend/webhook
     environment:
-      API_HOST: ${HOST}
-      API_PORT: ${DOCKER_PORT_WEBHOOK}
+      API_HOST: 0.0.0.0
+      API_PORT: 5003
       PYANNOTEAI_WEBHOOK_SIGNING_SECRET: ${PYANNOTEAI_WEBHOOK_SIGNING_SECRET?PYANNOTEAI_WEBHOOK_SIGNING_SECRET must be set!}
       API_SERVER_HOST: api-server
-      API_SERVER_PORT: ${DOCKER_PORT_SERVER}
+      API_SERVER_PORT: 5000
     networks:
       - webhook-network
       - backend-network
@@ -52,7 +52,7 @@ services:
     image: ngrok/ngrok:latest
     command:
       - "http"
-      - "http://webhook:${DOCKER_PORT_WEBHOOK}" 
+      - "http://webhook:5003" 
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTH_TOKEN}
     depends_on:
@@ -63,12 +63,12 @@ services:
   api-server:
     build: ./backend/api-server
     environment:
-      API_HOST: ${HOST}
-      API_PORT: ${DOCKER_PORT_SERVER}
+      API_HOST: 0.0.0.0
+      API_PORT: 5000
       PYANNOTE_WRAPPER_HOST: pyannote-wrapper
-      PYANNOTE_WRAPPER_PORT: ${DOCKER_PORT_WRAPPER_PYANNOTE}
+      PYANNOTE_WRAPPER_PORT: 5001
       MONGO_GATEWAY_HOST: mongo-gateway
-      MONGO_GATEWAY_PORT: ${DOCKER_PORT_MONGO_GATEWAY}
+      MONGO_GATEWAY_PORT: 5002
     depends_on:
       - mongodb
       - pyannote-wrapper

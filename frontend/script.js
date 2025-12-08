@@ -212,18 +212,18 @@ async function playAudio() {
 /**
  * Deletes an option from a dropdown list by its value.
  */
-function deleteOptionByValue(listId, valeur) {
+function deleteOptionByValue(listId, value) {
     const dropdownList = document.getElementById(listId);
 
     for (let i = 0; i < dropdownList.options.length; i++) {
-        if (dropdownList.options[i].value === valeur) {
+        if (dropdownList.options[i].value === value) {
             dropdownList.remove(i);
             console.log(`Option with value "${value}" deleted.`);
             return;
         }
     }
 
-    console.log(`Option with value "${value}" not found.`);
+    console.log(`Option with value "${valeur}" not found.`);
 }
 
 /**
