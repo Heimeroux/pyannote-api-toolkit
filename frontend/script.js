@@ -223,7 +223,7 @@ function deleteOptionByValue(listId, value) {
         }
     }
 
-    console.log(`Option with value "${valeur}" not found.`);
+    console.log(`Option with value "${value}" not found.`);
 }
 
 /**
