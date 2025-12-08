@@ -616,7 +616,7 @@ document.getElementById('selectTurnLevelForm').addEventListener('submit', async 
         const result = await response.json();
         if (!response.ok) throw new Error(result.details || "Error during filenames request");
 
-        onsole.log('Success:', result);
+        console.log('Success:', result);
 
         const columns = ["start", "end", "speaker", "speaker_confidence"];
         fillTable("tabTurnThreshold", result["result"], columns);
