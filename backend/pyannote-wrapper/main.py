@@ -5,39 +5,48 @@ import pandas as pd
 import numpy as np
 import requests
 import logging
-
 from fastapi import FastAPI, Request, UploadFile, Form, File, status, Body
 from fastapi import HTTPException
 from typing import Dict
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+app = FastAPI()
 
 api_host = os.getenv("API_HOST")
 api_port = os.getenv("API_PORT")
 token_pyannote = os.getenv("TOKEN_PYANNOTE")
 webhook_uri = os.getenv("WEBHOOK_URI")
 
+if not all([api_host, api_port, token_pyannote, webhook_uri]):
+    logger.error("Missing required environment variables.")
+    sys.exit(1)
 
-app = FastAPI()
-logger = logging.getLogger(__name__)
-
-logger.setLevel(logging.DEBUG)
-    
-# create custom handler for INFO msg
-stdout_handler = logging.StreamHandler(sys.stdout)
-stdout_handler.setLevel(logging.DEBUG)
-    
-logger.addHandler(stdout_handler)
-
-
-@app.post("/upload_file")
+@app.post("/files/upload")
 async def upload_file(
-    filename: str = Form(...),
-    file_id: str = Form(...),
-    file: UploadFile = File(...)
+    filename: str = Form(..., min_length=1, description="Name of the file to upload"),
+    file_id: str = Form(..., min_length=1, description="Unique identifier of the file"),
+    file: UploadFile = File(..., description="Audio file to upload")
 ) -> Dict[str, str]:
+    """
+    Upload an audio file to the PyAnnote API.
+    Args:
+        filename: Name of the file to upload.
+        file_id: Unique identifier of the file.
+        file: Audio file to upload.
+    Returns:
+        Dict[str, str]:
+            - status: Request status ("success").
+            - message: Confirmation message.
+    Raises:
+        HTTPException:
+            - 4XX/5XX: In case of error with the PyAnnote API or internal error.
+    """
     try:
-        data = await file.read()
-
-        response = requests.post(
+        # Read file content
+        file_data = await file.read()
+        # Step 1: Get the pre-signed URL
+        presigned_response = requests.post(
             "https://api.pyannote.ai/v1/media/input",
             json={"url": f"media://{file_id}"},
             headers={
@@ -45,33 +54,62 @@ async def upload_file(
                 "Content-Type": "application/json"
             }
         )
-        response.raise_for_status()
-        presigned_url = response.json()["url"]
+        presigned_response.raise_for_status()
+        presigned_url = presigned_response.json()["url"]
+        # Step 2: Upload the file to the pre-signed URL
+        upload_response = requests.put(
+            presigned_url,
+            data=file_data
+        )
+        upload_response.raise_for_status()
+        logger.info(f"File '{filename}' (ID: {file_id}) successfully uploaded to PyAnnote.")
+        return {
+            "status": "success",
+            "message": f"File '{filename}' successfully sent to PyAnnote."
+        }
+    except requests.exceptions.HTTPError as http_error:
+        error_detail = http_error.response.json().get("detail", http_error.response.text)
+        logger.error(f"Error with PyAnnote API for file '{filename}': {error_detail}")
+        raise HTTPException(
+            status_code=http_error.response.status_code,
+            detail=f"PyAnnote API error: {error_detail}"
+        )
+    except requests.exceptions.RequestException as request_error:
+        logger.error(f"Request error for file '{filename}': {str(request_error)}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Connection error to PyAnnote API: {str(request_error)}"
+        )
+    except Exception as unexpected_error:
+        logger.error(f"Unexpected error while uploading file '{filename}': {str(unexpected_error)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error."
+        )
 
-        requests.put(presigned_url, data=data)
-
-        logger.info(f"File {filename} successfully uploaded to PyAnnote.")
-        return {"status": "success", "message": "File successfully sent to PyAnnote"}
-    except requests.exceptions.HTTPError as e:
-        logger.error(f"PyAnnote API error: {e.response.text}")
-        raise HTTPException(status_code=e.response.status_code, detail=f"PyAnnote API error: {e.response.text}")
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
-
-
-@app.post("/diarise")
-async def diarise(
-    file_id: str = Body(..., embed=True, min_length=1, description="File ID of the file to ask for diarisation")
+@app.post("/diarization/jobs")
+async def start_diarization(
+    file_id: str = Body(
+        ..., embed=True, min_length=1,
+        description="Unique identifier of the audio file to diarize (e.g., 'audio123')"
+    ),
+    nb_speakers: int = Body(
+        ..., embed=True, ge=1, le=100,
+        description="Number of speakers in the audio recording (1-100)"
+    )
 ) -> Dict[str, str]:
     """
-    Endpoint pour lancer la diarisation d'un fichier audio.
-
+    Start a diarization job for a given audio file.
     Args:
-        file_id (str): Identifiant du fichier (obligatoire).
-
+        file_id: Unique identifier of the audio file.
+        nb_speakers: Number of speakers in the recording (between 1 and 100).
     Returns:
-        dict: Résultat avec un job_id.
+        Dict[str, str]:
+            - status: Request status ("success").
+            - job_id: ID of the created diarization job.
+    Raises:
+        HTTPException:
+            - 4XX/5XX: In case of error with the PyAnnote API or internal error.
     """
     try:
         response = requests.post(
@@ -80,79 +118,40 @@ async def diarise(
                 "url": f"media://{file_id}",
                 "webhook": webhook_uri,
                 "confidence": True,
-                "turnLevelConfidence": True
+                "turnLevelConfidence": True,
+                "numSpeakers": nb_speakers
             },
             headers={
-               "Authorization": f"Bearer {token_pyannote}",
-               "Content-Type": "application/json"
+                "Authorization": f"Bearer {token_pyannote}",
+                "Content-Type": "application/json"
             }
         )
         response.raise_for_status()
-        job_id = response.json()['jobId']
-
-        logger.info(f"File {file_id} successfully sent for diarisation to PyAnnote.")
-        return {"status": "success", "job_id": job_id}
-    except requests.exceptions.HTTPError as e:
-        logger.error(f"PyAnnote API error: {e.response.text}")
-        raise HTTPException(status_code=e.response.status_code, detail=f"PyAnnote API error: {e.response.text}")
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
-    
-@app.get("/diarize_file/{filename}")
-def diarize_file(object_key: str, job_id: str, filename: str):
-    """
-    Étape 1 Diarization du fichier
-    Étape 2 Ajout du job_id
-    """
-    # Étape 1
-    try:
-        response = requests.post(
-            "https://api.pyannote.ai/v1/diarize",
-            json={
-                "url": f"media://{object_key}",
-                "webhook": "http://0.0.0.0:5000/webhook",
-                "confidence": True,
-                "turnLevelConfidence": True
-            },
-            headers={
-               "Authorization": f"Bearer {token_pyannote}",
-               "Content-Type": "application/json"
-            }
+        job_id = response.json()["jobId"]
+        logger.info(f"Diarization job successfully created for file '{file_id}' (job_id: {job_id}).")
+        return {
+            "status": "success",
+            "job_id": job_id
+        }
+    except requests.exceptions.HTTPError as http_error:
+        error_detail = http_error.response.json().get("detail", http_error.response.text)
+        logger.error(f"PyAnnote API error for file '{file_id}': {error_detail}")
+        raise HTTPException(
+            status_code=http_error.response.status_code,
+            detail=f"PyAnnote API error: {error_detail}"
         )
-        response.raise_for_status()
-    except e:
-        print("Error:", e)
-
-    job_id = response.json()['jobId']
-
-    # Étape 2
-    #file_infos.update_job_id(job_id, filename)
-
-# TO DO
-@app.post("/webhook")
-def process_results(request: Request):
-    """
-    Étape 1 Récupérer résultat
-    Étape 2 Nettoyer le JSON et calculer le score moyen sur les turns
-    Étape 3 Calculer le score moyen au sample level
-    Étape 4 Ajouter les résultats dans la BD
-    """
-
-    # Étape 1
-    data = request.json()  #"""==> à adapter car disponile que sous flask"""
-    job_id = data["jobId"]
-    
-    # Étape 2
-    df = pd.DataFrame(data["output"]["diarization"])
-    result_diarization = df.drop(['confidence'], axis=1).to_dict(orient="records")
-    turn_level_mean_score = np.mean([next(iter(d.values())) for d in df['confidence']])
-    
-    # Étape 3
-    sample_level_mean_score = np.mean(data["output"]["confidence"]["score"])
-
-    # Étape 4
-    #file_infos.update_diarization_infos(sample_level_mean_score, turn_level_mean_score, diarization_result, job_id)
+    except requests.exceptions.RequestException as request_error:
+        logger.error(f"Connection error to PyAnnote API for '{file_id}': {str(request_error)}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"PyAnnote service unavailable: {str(request_error)}"
+        )
+    except Exception as unexpected_error:
+        logger.error(f"Unexpected error while diarizing '{file_id}': {str(unexpected_error)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error."
+        )
 
 if __name__ == "__main__":
     host = os.getenv("API_HOST", "0.0.0.0")

@@ -4,8 +4,6 @@ services:
   mongodb:
     build: ./backend/mongo
     image: mongo:8.0
-    ports:
-      - "27017:27017" # To keep only if you want to connect to mongo from local
     volumes:
       - mongo-data:/data/db
       - mongo-config:/data/configdb
@@ -22,15 +20,11 @@ services:
       API_PORT: ${DOCKER_PORT_WRAPPER_PYANNOTE}
       TOKEN_PYANNOTE: ${TOKEN_PYANNOTE}
       WEBHOOK_URI: https://${NGROK_SUBDOMAIN?NGROK_SUBDOMAIN must be set!}${WEBHOOK_ENDPOINT?WEBHOOK_ENDPOINT must be set!}
-    #ports:
-    #  - "5000:5000"
     networks:
       - backend-network
 
   mongo-gateway:
     build: ./backend/mongo-gateway
-    #ports:
-    #  - "5002:5002"
     environment:
       API_HOST: ${HOST}
       API_PORT: ${DOCKER_PORT_MONGO_GATEWAY}
@@ -44,24 +38,18 @@ services:
 
   webhook:
     build: ./backend/webhook
-    #ports:
-    #  - "5003:5003"
     environment:
       API_HOST: ${HOST}
       API_PORT: ${DOCKER_PORT_WEBHOOK}
       PYANNOTEAI_WEBHOOK_SIGNING_SECRET: ${PYANNOTEAI_WEBHOOK_SIGNING_SECRET?PYANNOTEAI_WEBHOOK_SIGNING_SECRET must be set!}
       API_SERVER_HOST: api-server
       API_SERVER_PORT: ${DOCKER_PORT_SERVER}
-      #NGROK_SUBDOMAIN: ${NGROK_SUBDOMAIN}
-      #NGROK_AUTH_TOKEN: ${NGROK_AUTH_TOKEN}
     networks:
       - webhook-network
       - backend-network
 
   ngrok:
     image: ngrok/ngrok:latest
-    #ports:
-    #  - "4040:4040"
     command:
       - "http"
       - "http://webhook:${DOCKER_PORT_WEBHOOK}" 
@@ -74,8 +62,6 @@ services:
 
   api-server:
     build: ./backend/api-server
-    #ports:
-    #  - "5000:5000"
     environment:
       API_HOST: ${HOST}
       API_PORT: ${DOCKER_PORT_SERVER}

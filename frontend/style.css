@@ -1,0 +1,152 @@
+#uploadForm {
+    display: flex;
+    flex-direction: column;   
+    align-items: flex-start;  
+    gap: 10px;                
+    max-width: 400px;         
+}
+
+#uploadForm input,
+#uploadForm select,
+#uploadForm button {
+    width: 100%;
+    max-width: 300px;
+}
+
+
+#diarisationForm {
+    display: flex;
+    flex-direction: column;   
+    align-items: flex-start;  
+    gap: 10px;                
+    max-width: 400px;         
+}
+
+#diarisationForm select,
+#diarisationForm button {
+    width: 100%;
+    max-width: 300px;
+}
+
+#svgForm {
+    display: flex;
+    flex-direction: column;   
+    align-items: flex-start;  
+    gap: 10px;                
+    max-width: 400px;         
+}
+
+#svgForm select,
+#svgForm button {
+    width: 100%;
+    max-width: 300px;
+}
+
+#audioBlock {
+    display: flex;
+    flex-direction: column;    
+    align-items: flex-start;   
+    gap: 10px;                 
+    max-width: 300px;          
+}
+
+#audioBlock label,
+#audioBlock select,
+#audioBlock audio {
+    width: 100%;
+}
+
+#integerForm {
+    display: flex;
+    flex-direction: column;   
+    align-items: flex-start;  
+    gap: 10px;                
+    max-width: 400px;         
+}
+
+#integerForm input,
+#integerForm select,
+#integerForm button {
+    width: 100%;
+    max-width: 300px;
+}
+
+#deletionForm {
+    display: flex;
+    flex-direction: column;   
+    align-items: flex-start;  
+    gap: 10px;                
+    max-width: 400px;         
+}
+
+#deletionForm select,
+#deletionForm button {
+    width: 100%;
+    max-width: 300px;
+}
+
+#selectMeanForm {
+    display: flex;
+    flex-direction: column;   
+    align-items: flex-start;  
+    gap: 10px;                
+    max-width: 400px;         
+}
+
+#selectMeanForm input,
+#selectMeanForm button {
+    width: 100%;
+    max-width: 300px;
+}
+
+#selectSampleLevelForm {
+    display: flex;
+    flex-direction: column;   
+    align-items: flex-start;  
+    gap: 10px;                
+    max-width: 400px;         
+}
+
+#selectSampleLevelForm input,
+#selectSampleLevelForm select,
+#selectSampleLevelForm button {
+    width: 100%;
+    max-width: 300px;
+}
+
+#selectTurnLevelForm {
+    display: flex;
+    flex-direction: column;   
+    align-items: flex-start;  
+    gap: 10px;                
+    max-width: 400px;         
+}
+
+#selectTurnLevelForm input,
+#selectTurnLevelForm select,
+#selectTurnLevelForm button {
+    width: 100%;
+    max-width: 300px;
+}
+
+.table-scroll {
+    max-height: 300px;     
+    width: 700px; 
+    overflow-y: auto;      
+    overflow-x: auto;      
+    border: 1px solid #ccc;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+
+.table-scroll table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table-scroll th,
+.table-scroll td {
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+}

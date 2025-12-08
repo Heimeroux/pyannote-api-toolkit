@@ -4,349 +4,169 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PyAnnote Api Toolkit</title>
+
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>    
+    <!-- ===================== UPLOAD ===================== -->
+    <h1>Upload Audio</h1>
     <form id="uploadForm" enctype="multipart/form-data">
-        <label for="audio">Choisir un fichier audio :</label>
+        <label for="audio">Choose an audio file:</label>
         <input type="file" id="audio" name="audio" accept="audio/wav" required>
-        <br><br>
-
-        <label for="filenameUpload">Nom du fichier :</label>
-        <input type="text" id="filenameUpload" placeholder="Nom du fichier" required>
-        <!--
-        <select id="filenameUpload" required>
-        <option value="">-- Sélectionnez --</option>
-        </select>
-        -->
-        <br><br>
-
-        <label for="storageType">Type de stockage :</label>
+        <label for="filenameUpload">File name:</label>
+        <input type="text" id="filenameUpload" placeholder="File name" required>
+        <label for="storageType">Storage type:</label>
         <select id="storageType" required>
-            <option value="">-- Sélectionnez --</option>
+            <option value="">-- Select --</option>
             <option value="PyAnnote">PyAnnote</option>
         </select>
-        <br><br>
-        
-        <button type="submit">Envoyer</button>
+        <label for="nbSpeakers">Number of speakers (1–100):</label>
+        <input type="number" id="nbSpeakers" min="1" max="100" step="1" required>
+        <button type="submit">Submit</button>
     </form>
-
+    <hr>
+    <!-- ===================== DIARIZATION ===================== -->
+    <h1>Diarization</h1>
     <form id="diarisationForm">
-        <label for="filenameDiarisation">Nom du fichier :</label>
-        <!--<input type="text" id="filenameDiarisation" placeholder="Nom du fichier" required>-->
-        
+        <label for="filenameDiarisation">File name:</label>
         <select id="filenameDiarisation" required>
-        <option value="">-- Sélectionnez --</option>
+            <option value="">-- Select --</option>
         </select>
-        
-        <br><br>
-        
-        <button type="submit">Diariser</button>
-    </form>
 
-    <form id="file-form">
-        <label for="filenameSVG">Nom du fichier (ex: "tips" ou "iris") :</label>
-        <!--<input type="text" id="filenameSVG" name="filename" required>-->
+        <button type="submit">Diarize</button>
+    </form>
+    <hr>
+    <!-- ===================== SVG GENERATION ===================== -->
+    <h1>Diagram Generation</h1>
+    <form id="svgForm">
+        <label for="filenameSVG">File name:</label>
         <select id="filenameSVG" required>
-        <option value="">-- Sélectionnez --</option>
+            <option value="">-- Select --</option>
         </select>
-        <button type="submit">Générer le diagramme</button>
+        <button type="submit">Generate</button>
     </form>
-
-    <!-- Conteneur pour le SVG -->
     <div id="plot-container">
-        <p>Aucun diagramme généré. Veuillez soumettre un nom de fichier.</p>
+        <p>No diagram generated. Please submit a file name.</p>
     </div>
-    <br><br>
-
-    
-    <br><br>
-
-    <h1>Human score</h1>
-    <form id="integerForm">
-        <label for="integerInput">Entrez un entier entre 0 et 100 :</label>
-        <input type="number" id="integerInput" name="integerInput" min="0" max="100" step="1" required>
-        <label for="filenameLists">Nom des fichiers :</label>
-        <select id="filenameLists" required>
-            <option value="">-- Sélectionnez --</option>
-            <!--<option value="PyAnnote">PyAnnote</option>-->
+    <hr>
+    <!-- ===================== AUDIO PLAYBACK ===================== -->
+    <h1>Listen to Audio</h1>
+    <div id="audioBlock">
+        <label for="filenameListening">File names:</label>
+        <select id="filenameListening" required>
+            <option value="">-- Select --</option>
         </select>
-        <button type="submit">Soumettre</button>
+
+        <audio id="audioPlayer" controls></audio>
+    </div>
+
+    <hr>
+    <!-- ===================== HUMAN SCORE ===================== -->
+    <h1>Human Score</h1>
+    <form id="integerForm">
+        <label for="integerInput">Enter an integer (0–100):</label>
+        <input type="number" id="integerInput" min="0" max="100" step="1" required>
+        <label for="filenameLists">File names:</label>
+        <select id="filenameLists" required>
+            <option value="">-- Select --</option>
+        </select>
+        <button type="submit">Submit</button>
     </form>
-    <br><br>
-    
+    <hr>
+    <!-- ===================== FILE DELETION ===================== -->
+    <h1>Delete Audio File</h1>
+    <form id="deletionForm">
+        <label for="filenameDeletion">File name:</label>
+        <select id="filenameDeletion" required>
+            <option value="">-- Select --</option>
+        </select>
+        <button type="submit">Delete</button>
+    </form>
+    <hr>
+    <!-- ===================== THRESHOLD MEAN ===================== -->
+    <h1>Threshold Criteria (Mean)</h1>
+    <form id="selectMeanForm">
+        <label for="humanBorneInfSlider">Lower Bound Human Score: <span id="humanBorneInfDisplay">50</span></label>
+        <input type="range" id="humanBorneInfSlider" min="0" max="100" value="50">
+        <label for="humanBorneSupSlider">Upper Bound Human Score: <span id="humanBorneSupDisplay">50</span></label>
+        <input type="range" id="humanBorneSupSlider" min="0" max="100" value="50">
+        <label for="sampleLevelBorneInfSlider">Lower Bound Sample Level Score: <span id="sampleLevelBorneInfDisplay">50</span></label>
+        <input type="range" id="sampleLevelBorneInfSlider" min="0" max="100" value="50">
+        <label for="sampleLevelBorneSupSlider">Upper Bound Sample Level Score: <span id="sampleLevelBorneSupDisplay">50</span></label>
+        <input type="range" id="sampleLevelBorneSupSlider" min="0" max="100" value="50">
+        <button type="submit">Display</button>
+    </form>
+    <div class="table-scroll">
+        <table id="tabMeanThreshold">
+            <thead>
+                <tr>
+                    <th>Filename</th>
+                    <th>Human score</th>
+                    <th>Mean system score</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <hr>
+    <!-- ===================== THRESHOLD SAMPLE LEVEL ===================== -->
+    <h1>Threshold Criteria (Sample-Level)</h1>
+    <form id="selectSampleLevelForm">
+        <label for="frameBorneInfSlider">Lower Bound Human Score:</label>
+        <input type="range" id="frameBorneInfSlider" min="0" max="100" value="50">
+        <span id="frameBorneInfDisplay">50</span>
+        <label for="frameBorneSupSlider">Upper Bound Human Score:</label>
+        <input type="range" id="frameBorneSupSlider" min="0" max="100" value="50">
+        <span id="frameBorneSupDisplay">50</span>
+        <label for="filenameSample">File name:</label>
+        <select id="filenameSample" required>
+            <option value="">-- Select --</option>
+        </select>
+        <button type="submit">Display</button>
+    </form>
+    <div class="table-scroll">
+        <table id="tabSampleThreshold">
+            <thead>
+                <tr>
+                    <th>Confidence</th>
+                    <th>Start</th>
+                    <th>End</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <hr>
+    <!-- ===================== THRESHOLD TURN LEVEL ===================== -->
+    <h1>Threshold Criteria (Turn-Level)</h1>
+    <form id="selectTurnLevelForm">
+        <label for="turnBorneInfSlider">Lower Bound Human Score:</label>
+        <input type="range" id="turnBorneInfSlider" min="0" max="100" value="50">
+        <span id="turnBorneInfDisplay">50</span>
+        <label for="turnBorneSupSlider">Upper Bound Human Score:</label>
+        <input type="range" id="turnBorneSupSlider" min="0" max="100" value="50">
+        <span id="turnBorneSupDisplay">50</span>
+        <label for="filenameTurn">File name:</label>
+        <select id="filenameTurn" required>
+            <option value="">-- Select --</option>
+        </select>
+        <button type="submit">Display</button>
+    </form>
+    <div class="table-scroll">
+        <table id="tabTurnThreshold">
+            <thead>
+                <tr>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Speaker</th>
+                    <th>Confidence</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
 
-    <script>
-        let nbOfDocs = 0;
-        let filenamesRegistered = [];
-        let listIds = ["filenameLists", "filenameSVG", "filenameDiarisation"];
 
-        async function getNumberOfDocuments() {
-            try {
-                const response = await fetch('/get_number_of_documents', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-        
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.details || "Erreur lors de la demande du nb de docs");
-        
-                console.log('Succès :', result);
-                //alert("Récupération réussie avec succès !");
-                nbOfDocs = result["nb_of_docs"];
-            } catch (error) {
-                console.error('Erreur :', error);
-                alert(`Erreur : ${error.message}`);
-            }
-        }
-
-        async function getAllFilenames() {
-            try {
-                const response = await fetch('/get_all_filenames', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-        
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.details || "Erreur lors de la demande de filenams");
-        
-                console.log('Succès :', result);
-                //alert("Récupération réussie avec succès !");
-                filenamesRegistered = result["filenames"];
-            } catch (error) {
-                console.error('Erreur :', error);
-                alert(`Erreur : ${error.message}`);
-            }
-        }
-
-        async function updateFilenamesFields(listId) {
-            const newStorageTypes = filenamesRegistered.map(item => ({
-                value: item,
-                label: item
-            }));
-            
-            const selectElement = document.getElementById(listId);
-            const existingOptions = Array.from(selectElement.options).slice(1);
-            const existingValues = existingOptions.map(option => option.value);
-
-            const newOptionsToAdd = newStorageTypes.filter(
-                type => !existingValues.includes(type.value)
-            );
-
-            newOptionsToAdd.forEach(type => {
-                const option = document.createElement("option");
-                option.value = type.value;
-                option.textContent = type.label;
-                selectElement.appendChild(option);
-            });
-
-        }
-        
-        async function refreshData() {
-            try {
-                await Promise.all([
-                    getNumberOfDocuments(),
-                    getAllFilenames()
-                ]);
-
-                // for d in data: updateFilenamesFields(d);
-                for (const listId of listIds) {
-                    updateFilenamesFields(listId);
-                }
-            } catch (error) {
-                console.error("Erreur lors de l'initialisation :", error);
-            }
-        }
-        
-        refreshData();
-        
-        function resetFileFields() {
-            const audioInput = document.getElementById('audio');
-            const filenameInput = document.getElementById('filenameUpload');
-        
-            audioInput.value = "";
-            filenameInput.value = "";
-        }
-        
-        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const audioInput = document.getElementById('audio');
-            const audioFile = audioInput.files[0];
-            const filenameInput = document.getElementById('filenameUpload');
-            const storageSelect = document.getElementById('storageType');
-
-            if (!audioFile) {
-                alert("Veuillez sélectionner un fichier.");
-                return;
-            }
-        
-            // Wav verification
-            const contentType = audioFile.type;
-            const mimeOk = contentType === "audio/wav" || contentType === "audio/x-wav";
-            const extensionOk = audioFile.name.toLowerCase().endsWith(".wav");
-        
-            if (!mimeOk || !extensionOk) {
-                alert("Le fichier doit être un fichier WAV (.wav).");
-                resetFileFields();
-                return;
-            }
-            
-            const filename = filenameInput.value.trim();
-            if (!filename) {
-                alert("Veuillez entrer un nom de fichier.");
-                return;
-            }
-                        
-
-            const storageType = storageSelect.value;
-            if (!storageType) {
-                alert("Veuillez sélectionner un type de stockage.");
-                return;
-            }
-            
-            
-            const formData = new FormData();
-            const fileId = "file-" + (nbOfDocs + 1);
-            formData.append('file', audioFile);
-            formData.append('filename', filename);
-            formData.append('storage_type', storageType);
-            formData.append('file_id', fileId);
-            formData.append('content_type', contentType);
-            
-            try {
-                const response = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.details || "Erreur lors de l'upload");
-                await refreshData();
-                console.log('Succès :', result);
-                alert("Fichier uploadé avec succès !");
-            } catch (error) {
-                console.error('Erreur :', error);
-                alert(`Erreur : ${error.message}`);
-            }
-
-            resetFileFields();
-        });
-
-        document.getElementById('diarisationForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const filenameInput = document.getElementById('filenameDiarisation');
-
-            //const filename = filenameInput.value.trim();
-            const filename = filenameInput.value;
-            if (!filename) {
-                alert("Veuillez entrer un nom de fichier.");
-                return;
-            }
-            
-            try {
-                const response = await fetch('/diarise', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ filename })
-                });
-        
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.details || "Erreur lors de la demande de diarisation");
-        
-                console.log('Succès :', result);
-                alert("Diarisation lancée avec succès !");
-            } catch (error) {
-                console.error('Erreur :', error);
-                alert(`Erreur : ${error.message}`);
-            }
-
-        });
-
-        document.getElementById('audio').addEventListener('change', function() {
-            const file = this.files[0];
-            if (file) {
-                const nameWithoutExt = file.name.replace(/\.[^/.]+$/, ""); // retirer l'extension
-                document.getElementById('filenameUpload').value = nameWithoutExt;
-            }
-        });
-
-        document.getElementById("file-form").addEventListener("submit", function(event) {
-            event.preventDefault(); // Empêche le rechargement de la page
-
-            const filename = document.getElementById("filenameSVG").value;
-            if (!filename) {
-                alert("Veuillez entrer un nom de fichier.");
-                return;
-            }
-
-            // Appel à l'API avec le filename en paramètre
-            fetch(`/plot?filename=${encodeURIComponent(filename)}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Erreur HTTP : ${response.status}`);
-                    }
-                    return response.text();
-                })
-                .then(svgContent => {
-                    document.getElementById("plot-container").innerHTML = svgContent;
-                })
-                .catch(error => {
-                    console.error("Erreur lors de la récupération du SVG :", error);
-                    /*document.getElementById("plot-container").innerHTML =
-                        `<p style="color: red;">Erreur : ${error.message}</p>`;*/
-                    document.getElementById("plot-container").innerHTML =
-                        `<p style="color: red;">Le fichier ${filename} n'a pas encore été diarisé! Veuillez procéder à la diarisation dans un premier temps.</p>`;
-                });
-        });
-
-        document.getElementById('integerForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const integerInput = document.getElementById('integerInput');
-            const filenameInput = document.getElementById('filenameLists');
-            
-            const filename = filenameInput.value;
-            if (!filename) {
-                alert("Veuillez entrer un nom de fichier.");
-                return;
-            }
-                        
-
-            const integer = integerInput.value;
-            if (!integer) {
-                alert("Veuillez sélectionner un score.");
-                return;
-            }
-            
-            try {
-                const response = await fetch('/update_human_score', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ filename: filename, human_score: integer })
-                });
-        
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.details || "Erreur lors de la demande de la demande d'update de score");
-        
-                console.log('Succès :', result);
-                alert("Update réussie !");
-            } catch (error) {
-                console.error('Erreur :', error);
-                alert(`Erreur : ${error.message}`);
-            }
-        });
-        
-    </script>
-
-    <!--<script src="script.js"></script>-->
+    <script src="script.js"></script>
 </body>
 </html>
