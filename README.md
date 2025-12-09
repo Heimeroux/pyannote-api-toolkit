@@ -23,7 +23,7 @@ The application consists of **6 distinct services**, orchestrated using **Docker
  | **Mongo Gateway**      | Interface for interacting with the **MongoDB** database.                    |
  | **MongoDB**            | Database for storing application data.                                      |
 
-**Note:** Only the **webhook** is exposed to the internet via **Ngrok**. The **HTML page** is the only other service with a publicly accessible port for user interaction.
+**Note:** Only the **webhook** is exposed to the internet via **Ngrok**. The **HTML page** is the only other service with an accessible port for user interaction.
 
 ---
 
